@@ -1,0 +1,6 @@
+module Pods_providus_providusTests {
+  umbrella header "Pods-providus-providusTests-umbrella.h"
+
+  export *
+  module * { export * }
+}

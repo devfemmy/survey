@@ -1,0 +1,6 @@
+module Pods_providus {
+  umbrella header "Pods-providus-umbrella.h"
+
+  export *
+  module * { export * }
+}
