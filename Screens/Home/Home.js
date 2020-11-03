@@ -1,6 +1,7 @@
 import React, { useState,useEffect } from 'react';
 import { Dimensions, ImageBackground, StyleSheet, Alert,
     Text, View, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-community/async-storage';
 import { ScrollView, TouchableOpacity } from 'react-native-gesture-handler';
 import SurveyCard from '../../Components/SurveyCard';
 import axios from '../../axios';
@@ -9,53 +10,76 @@ const Home = (props) => {
     const [loading, setLoading] = useState(true);
     const [surveys, setSurveys] = useState([]);
     const [base_url, setUrl] = useState('');
-
+    const [imageUri, setImageUri] = useState('');
+    const [token, setToken] = useState(null);
+    const getData = async () => {
+        try {
+          const value = await AsyncStorage.getItem('token')
+          if(value !== null) {
+            // value previously stored
+            setToken(value)
+          }
+        } catch(e) {
+          // error reading value
+        }
+      }
+  
     const fetchSurvey = () => {
-        axios.get('surveys/all')
-        .then(
+    
+        const savedToken = AsyncStorage.getItem('token').then(
             res => {
-                setLoading(false)
-                console.log('surveys', res.data)    
-                const response = res.data;
-                const surveys = response.data.surveys;   
-                const base_url = response.data.base_url;
-                setSurveys(surveys)  
-                setUrl(base_url)            
+                axios.get('surveys/all', {headers: {Token: res}})
+                .then(
+                    res => {
+                        setLoading(false)
+                        console.log('surveys', res.data)    
+                        const response = res.data;
+                        const surveys = response.data.surveys;   
+                        const base_url = response.data.base_url;
+                        const imageUri = response.data.banner_url.original;
+                        const reverseArray = surveys.reverse()
+                        setSurveys(reverseArray);
+                        setUrl(base_url);
+                        setImageUri(imageUri)            
+                    }
+                )
+                .catch(err => {
+                    setLoading(false)
+                    console.log(err.response)
+                    const code = err.response.status;
+                    if (code === 401) {
+                        Alert.alert(
+                            'Error!',
+                            'Unauthorized Token, Please Configure Device',
+                            [
+                              {text: 'OK', onPress: () => {props.navigation.goBack()}},
+                            ],
+                            { cancelable: false }
+                          )
+                      
+                    } else {
+        
+                        Alert.alert(
+                            'Network Error',
+                            'Please Try Again',
+                            [
+                              {text: 'OK'},
+                            ],
+                            { cancelable: false }
+                          )
+                    }
+        
+                      
+                    
+        
+                })
             }
-        )
-        .catch(err => {
-            setLoading(false)
-            console.log(err.response)
-            const code = err.response.status;
-            if (code === 401) {
-                Alert.alert(
-                    'Error!',
-                    'Expired Token',
-                    [
-                      {text: 'OK', onPress: () => signOut()},
-                    ],
-                    { cancelable: false }
-                  )
-              
-            } else {
-                // showLoaded(true)
-                Alert.alert(
-                    'Network Error',
-                    'Please Try Again',
-                    [
-                      {text: 'OK'},
-                    ],
-                    { cancelable: false }
-                  )
-            }
+          ).catch(err => console.log(err));
 
-              
-            
-
-        })
     }
     useEffect(() => {
         const unsubscribe = props.navigation.addListener('focus', () => {
+            getData()
             fetchSurvey()
           });
   
@@ -71,7 +95,7 @@ const Home = (props) => {
       }
     return (
         <ScrollView style= {styles.container}>
-            <ImageBackground style= {styles.imageStyle} source= {require('../../assets/background.png')}>
+            <ImageBackground defaultSource= {require('../../assets/background.png')} style= {styles.imageStyle} source= {{uri: imageUri}}>
 
             </ImageBackground>
             <View style= {styles.lowerContainer}>
@@ -80,7 +104,7 @@ const Home = (props) => {
                     const id = survey.id;
                     const questions = survey.questions
                     return (
-                        <TouchableOpacity key= {index} onPress= {() => props.navigation.navigate('Survey', {name: title, survey_id: id, questions: questions, base_url: base_url})}>
+                        <TouchableOpacity key= {index} onPress= {() => props.navigation.navigate('Survey', {name: title, survey_id: id, questions: questions, base_url: base_url, token: token})}>
                         <SurveyCard>
                             <View style= {styles.textContainer}>
                                 <Text style= {styles.textStyle}>

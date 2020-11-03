@@ -1,33 +1,47 @@
 import React, { useState } from 'react';
-import { Dimensions, StyleSheet, View, Alert } from 'react-native';
+import { Dimensions, StyleSheet, View, Alert, ActivityIndicator } from 'react-native';
+import { Overlay } from 'react-native-elements';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Container, Header, Content, Form, Item, Input, Label } from 'native-base'
 import InnerBtn from '../../Components/Innerbtn';
 import axios from '../../axios';
+import OverLayContent from '../../Components/OverLayContent';
 
 
 const CustomerDetails = (props) => {
-    const {responses, survey_id} = props.route.params;
+    const {responses, survey_id, token} = props.route.params;
+    const [visible, setVisible] = useState(false);
+    const [loading, setLoading] = useState(false)
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('')
+    console.log('RESPONSES', responses);
 
-    console.log("responses", responses);
-    console.log("survey_id", survey_id);
-
+    const moveToHome = () => {
+        setVisible(false)
+        props.navigation.navigate('Home')
+    }
+    const toggleOverlay = () => {
+        setVisible(true);
+      };
     const submitResponse = () => {
+        setLoading(true)
         const data = {
             responses: responses,
-            member_email: email,
-            member_phone: phone
+            respondent: email,
+            // member_phone: phone
         }
-        axios.post(`/surveys/${survey_id}/submit_response`, data)
+        axios.post(`/surveys/${survey_id}/submit_response`, data, {headers: {Token: token}})
         .then(
             res => {
+                setLoading(false)
+                toggleOverlay()
                 console.log(res)
+                setTimeout(function(){ moveToHome(); },3000)
             }
         )
         .catch(err => {
             // setLoading(false)
+            setLoading(false)
             console.log(err.response)
             const code = err.response.status;
             if (code === 401) {
@@ -57,29 +71,37 @@ const CustomerDetails = (props) => {
 
         })
     }
+
+    if (loading) {
+        return (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+           <ActivityIndicator  size="large" color="#FDB813" />
+          </View>
+        );
+      }
     return (
         <ScrollView style= {styles.container}>
         <View style= {styles.biggerContainer}>
         <View style= {styles.flexContainer}>
-            <View style= {{width: '35%'}}>
+            <View style= {{width: '70%'}}>
                 <Form>
                 <Item placeholderLabel= {styles.labelField} floatingLabel>
-                <Label>Email Address</Label>
+                <Label>Email Address / Phone Number</Label>
                 <Input
                 keyboardType= "email-address" 
-                autoCapitalize= {false}
+                autoCapitalize= {"none"}
                 onChangeText = {setEmail}
                 value= {email} 
                 style= {styles.pickerField} />
                 </Item>
                 </Form>
             </View>
-            <View style= {{width: '35%'}}>
+            {/* <View style= {{width: '35%'}}>
                 <Form>
                 <Item placeholder= "Phone Number" placeholderLabel= {styles.labelField} floatingLabel>
                 <Label>Phone Number</Label>
                 <Input
-                autoCapitalize= {false} 
+                autoCapitalize= {"none"}
                 keyboardType= "phone-pad"
                 placeholder= "Phone Number"
                 onChangeText = {setPhone}
@@ -87,13 +109,18 @@ const CustomerDetails = (props) => {
                 style= {styles.pickerField} />
                 </Item>
                 </Form>
-            </View>
+            </View> */}
             <View style= {{width: '30%'}}>
             <InnerBtn onPress= {submitResponse} color= "white" bg= "#FDB813" text= "Submit" />
             </View>
 
         </View>
         </View>
+        <View>
+            <Overlay  supportedOrientations={['portrait', 'landscape']} isVisible={visible} onBackdropPress={moveToHome}>
+                <OverLayContent text= "Feedback Submitted Successfully" />
+            </Overlay>
+          </View>
 
         </ScrollView>
 
@@ -103,6 +130,7 @@ const CustomerDetails = (props) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        height: Dimensions.get('window').height
     },
     flexContainer: {
         flexDirection: 'row',

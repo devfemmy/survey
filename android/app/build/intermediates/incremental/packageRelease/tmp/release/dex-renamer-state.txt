@@ -1,0 +1,4 @@
+#Mon Nov 02 19:44:13 WAT 2020
+base.0=/Users/itexecutive/Desktop/providus/android/app/build/intermediates/dex/release/mergeDexRelease/out/classes.dex
+path.0=classes.dex
+renamed.0=classes.dex
